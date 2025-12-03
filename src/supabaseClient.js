@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'SUA_URL_DO_SUPABASE' // Pegue no dashboard do Supabase
-const supabaseKey = 'SUA_CHAVE_ANON_KEY' // Pegue no dashboard do Supabase
+// Pega a URL e a chave anônima das variáveis de ambiente
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+// Cria e exporta o cliente Supabase
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
