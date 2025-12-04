@@ -1,7 +1,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import { 
   Shield, FileText, CheckCircle, AlertTriangle, Search, Send, LayoutDashboard, Lightbulb, RefreshCw, Bookmark,
-  Menu, X, User, Upload, ArrowRight, Lock, Save, Share2, 
+  Menu, X, User, Upload, ArrowRight, Lock, Save, Share2,
   MessageSquare, FileCheck, DollarSign, Calendar, Home, Trash2, History,
   Zap, Star, ChevronDown, Check, Mail, Phone, MapPin
 } from 'lucide-react';
@@ -461,6 +461,11 @@ const AuthPage = ({ isLoginMode, setIsLoginMode, formData, setFormData, handleAu
 const DashboardLayout = ({ children, active = 'upload', setView, currentContract, session, handleLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Constrói a URL pública para o avatar do usuário
+  const avatarUrl = session?.user?.user_metadata?.avatar_url
+    ? supabase.storage.from('avatars').getPublicUrl(session.user.user_metadata.avatar_url).data.publicUrl
+    : null;
+
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
     {/* Overlay para fechar o menu no mobile */}
@@ -484,11 +489,11 @@ const DashboardLayout = ({ children, active = 'upload', setView, currentContract
         <nav className="space-y-1">
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-            { id: 'clauses', icon: Bookmark, label: 'Cláusulas Salvas' },
             { id: 'upload', icon: Upload, label: 'Novo Contrato' },
             { id: 'history', icon: History, label: 'Histórico' },
+            { id: 'clauses', icon: Bookmark, label: 'Cláusulas Salvas' },
             { id: 'analysis', icon: FileCheck, label: 'Última Análise', disabled: !currentContract },
-            { id: 'profile', icon: User, label: 'Meu Perfil' }
+            { id: 'profile', icon: User, label: 'Meu Perfil' },
           ].map((item) => (
             <button 
               key={item.id}
@@ -509,8 +514,12 @@ const DashboardLayout = ({ children, active = 'upload', setView, currentContract
 
       <div className="pt-6 border-t border-gray-100">
         <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group">
-          <div className="h-10 w-10 bg-gradient-to-tr from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
-            {session?.user?.user_metadata?.full_name?.charAt(0) || 'U'}
+          <div className="h-10 w-10 bg-gradient-to-tr from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold shadow-md overflow-hidden">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar do usuário" className="h-full w-full object-cover" />
+            ) : (
+              session?.user?.user_metadata?.full_name?.charAt(0) || 'U'
+            )}
           </div>
           <div className="flex-1 overflow-hidden">
             <p className="text-sm font-bold text-gray-900 truncate">{session?.user?.user_metadata?.full_name || 'Visitante'}</p>
@@ -560,7 +569,7 @@ const UploadView = ({ session, loading, documentos, handleAnalyseDocument, handl
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (!newDocumentTitle.trim() || !uploadingFile || !contractType) {
+    if (!newDocumentTitle.trim() || !uploadingFile) {
       alert("Por favor, dê um título e selecione um arquivo PDF.");
       return;
     }
@@ -588,7 +597,6 @@ const UploadView = ({ session, loading, documentos, handleAnalyseDocument, handl
 
       setNewDocumentTitle('');
       setUploadingFile(null);
-      setContractType('locacao');
       await fetchDocumentos(); // Re-busca a lista para atualizar a UI
     } catch (error) {
       console.error("Erro no processo de upload:", error.message);
@@ -613,10 +621,14 @@ const UploadView = ({ session, loading, documentos, handleAnalyseDocument, handl
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Contrato</label>
           <select value={contractType} onChange={(e) => setContractType(e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white h-[50px]">
-            <option value="locacao">Locação</option>
-            <option value="servicos">Serviços</option>
-            <option value="edital">Edital</option>
-            <option value="outro">Outro</option>
+            <option value="locacao">Aluguel / Locação</option>
+            <option value="servicos">Prestação de Serviços</option>
+            <option value="seguro">Apólice de Seguro</option>
+            <option value="financiamento">Financiamento</option>
+            <option value="edital">Edital de Licitação</option>
+            <option value="nda">Acordo de Confidencialidade (NDA)</option>
+            <option value="propriedade_intelectual">Propriedade Intelectual</option>
+            <option value="outro">Outro (Análise Genérica)</option>
           </select>
         </div>
         <div>
@@ -650,7 +662,7 @@ const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleA
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Resumo do Contrato</h2>
         </div>
-        <div className="flex gap-3">
+        <div className="flex w-full justify-center md:w-auto md:justify-start gap-3">
           <Button variant="outline" onClick={() => handleReanalyze(data)} className="px-4 py-2 text-sm h-10 text-gray-600 border-gray-300 hover:bg-gray-50"><RefreshCw className="h-4 w-4" /> Analisar Novamente</Button>
           <Button variant="secondary" onClick={() => handleDownloadPdf(data.storage_path)} className="px-4 py-2 text-sm h-10"><Save className="h-4 w-4" /> Baixar PDF</Button>
           <Button onClick={() => handleShare(data.titulo)} className="px-4 py-2 text-sm h-10"><Share2 className="h-4 w-4" /> Compartilhar</Button>
@@ -734,9 +746,9 @@ const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleA
               <div className="space-y-4">
                 {data.recommendations.map((rec, idx) => (
                   <div key={idx} className="p-5 rounded-2xl border-l-4 border-blue-500 bg-blue-50/50 flex flex-col sm:flex-row gap-4 items-start">
-                    <div className="mt-1 p-2 bg-blue-100 text-blue-600 rounded-full shrink-0">
-                      <Lightbulb className="h-5 w-5" />
-                    </div>
+                     <div className="mt-1 p-2 bg-blue-100 text-blue-600 rounded-full shrink-0">
+                       <Lightbulb className="h-5 w-5" />
+                     </div>
                     <p className="text-gray-700 leading-relaxed flex-1">{rec.text}</p>
                     <div className="flex gap-2 self-start sm:self-center">
                       <Button variant="ghost" onClick={() => handleGenerateEmail(rec)} className="h-auto px-3 py-1 text-xs">Gerar E-mail</Button>
@@ -797,6 +809,11 @@ const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleA
 const ProfileView = ({ session, formData, setFormData, setView, handleLogout, handleProfileUpdate }) => {
   const [uploading, setUploading] = useState(false);
 
+  // Constrói a URL pública para o avatar do usuário
+  const avatarUrl = session?.user?.user_metadata?.avatar_url
+    ? supabase.storage.from('avatars').getPublicUrl(session.user.user_metadata.avatar_url).data.publicUrl
+    : null;
+
   const handleAvatarUpload = async (event) => {
     try {
       setUploading(true);
@@ -841,7 +858,11 @@ const ProfileView = ({ session, formData, setFormData, setView, handleLogout, ha
         <div className="p-8 border-b border-gray-100 flex flex-col md:flex-row items-center gap-8">
           <div className="relative group cursor-pointer">
              <div className="h-28 w-28 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 border-4 border-white shadow-lg overflow-hidden">
-               <span className="text-4xl font-bold text-gray-300">{session?.user?.user_metadata?.full_name?.charAt(0) || 'U'}</span>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar do usuário" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-4xl font-bold text-gray-300">{session?.user?.user_metadata?.full_name?.charAt(0) || 'U'}</span>
+              )}
              </div>
              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <label htmlFor="avatar-upload" className="cursor-pointer">
@@ -882,18 +903,31 @@ const ProfileView = ({ session, formData, setFormData, setView, handleLogout, ha
   );
 };
 
-const HistoryView = ({ documentos, loading, handleAnalyseDocument, handleDeleteDocument, setView, session, handleLogout, currentPage, setCurrentPage, hasMore, searchTerm, setSearchTerm }) => (
+const HistoryView = ({ documentos, loading, handleAnalyseDocument, handleDeleteDocument, setView, session, handleLogout, currentPage, setCurrentPage, hasMore, searchTerm, setSearchTerm, typeFilter, setTypeFilter }) => (
   <DashboardLayout active="history" setView={setView} session={session} handleLogout={handleLogout}>
     <div className="mb-8">
       <h2 className="text-3xl font-bold text-gray-900 mb-2">Histórico de Análises</h2>
       <p className="text-gray-500">Consulte todos os seus documentos enviados e seus respectivos status.</p>
     </div>
 
-    {/* Campo de Busca */}
-    <div className="mb-6">
-      <div className="relative">
+    {/* Filtros */}
+    <div className="grid md:grid-cols-3 gap-4 mb-6">
+      <div className="relative md:col-span-2">
         <Input type="text" placeholder="Buscar pelo título do documento..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+      </div>
+      <div>
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white h-[50px]">
+            <option value="all">Todos os Tipos</option>
+            <option value="locacao">Aluguel / Locação</option>
+            <option value="servicos">Prestação de Serviços</option>
+            <option value="seguro">Apólice de Seguro</option>
+            <option value="financiamento">Financiamento</option>
+            <option value="edital">Edital de Licitação</option>
+            <option value="nda">Acordo de Confidencialidade (NDA)</option>
+            <option value="propriedade_intelectual">Propriedade Intelectual</option>
+            <option value="outro">Outro (Análise Genérica)</option>
+        </select>
       </div>
     </div>
 
@@ -1129,7 +1163,7 @@ export default function App() {
   useEffect(() => {
     const timerId = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(0); // Reseta para a primeira página a cada nova busca
+      setCurrentPage(0); // Reseta para a primeira página a cada nova busca ou filtro
     }, 500); // Atraso de 500ms
 
     return () => {
@@ -1145,6 +1179,13 @@ export default function App() {
     }
   }, [session]);
 
+  // Efeito para recarregar a lista de histórico quando a busca ou filtro mudam
+  useEffect(() => {
+    if (session) {
+      fetchDocumentos(currentPage, debouncedSearchTerm, typeFilter);
+    }
+  }, [currentPage, debouncedSearchTerm, typeFilter]);
+
   // Efeito para popular o formulário de perfil quando a view muda
   useEffect(() => {
     if (view === 'profile' && session) {
@@ -1157,13 +1198,6 @@ export default function App() {
       });
     }
   }, [view, session]);
-
-  // Efeito para recarregar a lista de histórico quando a busca ou filtro mudam
-  useEffect(() => {
-    if (session) {
-      fetchDocumentos(currentPage, debouncedSearchTerm, typeFilter);
-    }
-  }, [currentPage, debouncedSearchTerm, typeFilter]);
 
   // Função para buscar os dados agregados para o Dashboard
   async function fetchDashboardData() {
@@ -1191,7 +1225,14 @@ export default function App() {
       }
     });
 
-    setDashboardData({ totalContracts, totalValue: `R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, totalAlerts });
+    setDashboardData({
+      totalContracts,
+      totalValue: `R$ ${totalValue.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+      totalAlerts,
+    });
   }
 
   // Função para buscar documentos no Supabase
@@ -1312,6 +1353,11 @@ export default function App() {
     }
   };
   
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    // O onAuthStateChange vai cuidar de redirecionar para 'landing'
+  };
+
   const handleReanalyze = async (documento) => {
     if (!window.confirm(`Tem certeza que deseja re-analisar o documento "${documento.titulo}"? A análise anterior será perdida e uma nova será gerada com as regras mais recentes.`)) {
       return;
@@ -1335,11 +1381,6 @@ export default function App() {
       console.error("Erro ao solicitar reanálise:", error.message);
       alert("Não foi possível iniciar a reanálise.");
     }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    // O onAuthStateChange vai cuidar de redirecionar para 'landing'
   };
 
   const handleDeleteDocument = async (documento) => {
@@ -1374,8 +1415,14 @@ export default function App() {
 
       if (error) throw error;
 
-      // Abre a URL em uma nova aba para iniciar o download
-      window.open(data.signedUrl, '_blank');
+      // Cria um link temporário e clica nele para forçar o download
+      // Esta abordagem é mais robusta contra bloqueadores de pop-up.
+      const link = document.createElement('a');
+      link.href = data.signedUrl;
+      link.setAttribute('download', ''); // Atributo 'download' força o download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error("Erro ao gerar link para download:", error.message);
       alert("Não foi possível baixar o arquivo.");
@@ -1405,17 +1452,6 @@ export default function App() {
     }
   };
 
-  const handleAddReminder = () => {
-    const newNotification = {
-      id: Date.now(),
-      message: 'Lembrete adicionado com sucesso!',
-    };
-    setNotifications(prev => [...prev, newNotification]);
-  };
-  const dismissNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
   const handleShare = async (title) => {
     if (navigator.share) {
       try {
@@ -1428,8 +1464,25 @@ export default function App() {
         console.error('Erro ao compartilhar:', error);
       }
     } else {
-      alert('A função de compartilhar não é suportada neste navegador. Você pode copiar a URL manualmente.');
+      // Fallback para navegadores que não suportam a Web Share API
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link da análise copiado para a área de transferência!');
+      } catch (err) {
+        alert('Não foi possível copiar o link. Por favor, copie a URL do navegador manualmente.');
+      }
     }
+  };
+
+  const handleAddReminder = () => {
+    const newNotification = {
+      id: Date.now(),
+      message: 'Lembrete adicionado com sucesso!',
+    };
+    setNotifications(prev => [...prev, newNotification]);
+  };
+  const dismissNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const handleSendMessage = (message) => {
@@ -1517,9 +1570,13 @@ export default function App() {
       const { error } = await supabase.from('saved_clauses').delete().match({ id: clauseId });
       if (error) throw error;
       // Força a recarga da view de cláusulas para refletir a exclusão
-      setView(''); // truque para forçar a remontagem
+      // Este é um pequeno "truque" para forçar o useEffect em ClausesView a rodar novamente
+      // ao mudar a view para algo temporário e depois de volta.
+      setView(''); 
       setTimeout(() => setView('clauses'), 0);
+      
     } catch (error) {
+      console.error('Erro ao deletar a cláusula:', error);
       alert('Erro ao deletar a cláusula.');
     }
   };
@@ -1570,7 +1627,7 @@ export default function App() {
   } else {
     // Usuário está logado
     return (
-      <>
+      <Fragment>
         {/* Área de Notificações */}
         <div className="fixed top-5 right-5 z-50 space-y-3">
           {notifications.map(n => (
@@ -1644,9 +1701,9 @@ export default function App() {
                   handleDownloadPdf={handleDownloadPdf}
                   handleShare={handleShare}
                   handleAddReminder={handleAddReminder}
-                  handleGenerateEmail={handleGenerateEmail}
-                  handleSaveClause={handleSaveClause}
                   handleReanalyze={handleReanalyze}
+                  handleSaveClause={handleSaveClause}
+                  handleGenerateEmail={handleGenerateEmail}
                   setView={setView}
                   session={session}
                   handleLogout={handleLogout}
@@ -1665,20 +1722,16 @@ export default function App() {
               );
             default: 
               return ( // Padrão para dashboard se logado
-                  <UploadView 
-                    session={session}
-                    loading={loading}
-                    documentos={documentos}
-                    handleAnalyseDocument={handleAnalyseDocument}
-                    handleDeleteDocument={handleDeleteDocument}
-                    fetchDocumentos={fetchDocumentos}
-                    setView={setView}
-                    handleLogout={handleLogout}
-                  />
-                );
+                <DashboardView
+                  session={session}
+                  setView={setView}
+                  handleLogout={handleLogout}
+                  dashboardData={dashboardData}
+                />
+              );
           }
         })()}
-      </>
+      </Fragment>
     );
   }
 }
