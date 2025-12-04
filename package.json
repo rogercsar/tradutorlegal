@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4",
     "lucide-react": "^0.555.0",
     "multiparty": "^4.2.3",
     "pdfjs-dist": "^4.4.168",

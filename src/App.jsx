@@ -1,11 +1,13 @@
 import { useState, useEffect, Fragment } from 'react';
 import { 
-  Shield, FileText, CheckCircle, AlertTriangle, Search, Send, LayoutDashboard, Lightbulb, RefreshCw, Bookmark,
+  Shield, FileText, CheckCircle, AlertTriangle, Search, Send, LayoutDashboard, Lightbulb, RefreshCw, Bookmark, GitCompareArrows,
   Menu, X, User, Upload, ArrowRight, Lock, Save, Share2,
   MessageSquare, FileCheck, DollarSign, Calendar, Home, Trash2, History,
   Zap, Star, ChevronDown, Check, Mail, Phone, MapPin
 } from 'lucide-react';
 import { supabase } from './supabaseClient'; // Importando o Supabase
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // --- MOCK DATA & SIMULATION LOGIC ---
 // Em produção, isso viria do seu Backend Node.js/Netlify Functions
@@ -62,7 +64,7 @@ const Button = ({ children, variant = 'primary', className = '', ...props }) => 
 };
 
 const Input = ({ label, ...props }) => (
-  <div className="mb-4">
+  <div>
     <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
     <input 
       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50 focus:bg-white"
@@ -490,6 +492,7 @@ const DashboardLayout = ({ children, active = 'upload', setView, currentContract
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
             { id: 'upload', icon: Upload, label: 'Novo Contrato' },
+            { id: 'comparison', icon: GitCompareArrows, label: 'Comparar Contratos' },
             { id: 'history', icon: History, label: 'Histórico' },
             { id: 'clauses', icon: Bookmark, label: 'Cláusulas Salvas' },
             { id: 'analysis', icon: FileCheck, label: 'Última Análise', disabled: !currentContract },
@@ -616,7 +619,7 @@ const UploadView = ({ session, loading, documentos, handleAnalyseDocument, handl
     {/* Formulário para Adicionar Novo Documento */}
     <form onSubmit={handleFormSubmit} className="mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
       <h3 className="font-bold text-lg mb-4">Adicionar Novo Documento</h3>
-      <div className="grid md:grid-cols-3 gap-4 items-end">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 items-end">
         <Input label="Título do Documento" type="text" placeholder="Ex: Contrato Aluguel Apto 101" value={newDocumentTitle} onChange={(e) => setNewDocumentTitle(e.target.value)} required />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Contrato</label>
@@ -651,7 +654,8 @@ const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleA
   const data = { ...currentContract, ...currentContract.analysis_result };
 
   return (
-    <DashboardLayout active="analysis" setView={setView} session={session} handleLogout={handleLogout} currentContract={currentContract}>
+    <DashboardLayout active="analysis" setView={setView} session={session} handleLogout={handleLogout} currentContract={currentContract} >
+      <div id="analysis-report-content"> {/* Adicionamos um ID para capturar esta área */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -663,8 +667,8 @@ const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleA
           <h2 className="text-3xl font-bold text-gray-900">Resumo do Contrato</h2>
         </div>
         <div className="flex w-full justify-center md:w-auto md:justify-start gap-3">
-          <Button variant="outline" onClick={() => handleReanalyze(data)} className="px-4 py-2 text-sm h-10 text-gray-600 border-gray-300 hover:bg-gray-50"><RefreshCw className="h-4 w-4" /> Analisar Novamente</Button>
-          <Button variant="secondary" onClick={() => handleDownloadPdf(data.storage_path)} className="px-4 py-2 text-sm h-10"><Save className="h-4 w-4" /> Baixar PDF</Button>
+          <Button variant="outline" onClick={() => handleReanalyze(data)} className="px-4 py-2 text-sm h-10 text-gray-600 border-gray-300 hover:bg-gray-50"><RefreshCw className="h-4 w-4" /> Reanalisar</Button>
+          <Button variant="secondary" onClick={() => handleDownloadPdf(data.titulo)} className="px-4 py-2 text-sm h-10"><Save className="h-4 w-4" /> Baixar Análise</Button>
           <Button onClick={() => handleShare(data.titulo)} className="px-4 py-2 text-sm h-10"><Share2 className="h-4 w-4" /> Compartilhar</Button>
         </div>
       </header>
@@ -802,11 +806,12 @@ const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleA
           </div>
         </div>
       </div>
+      </div>
     </DashboardLayout>
   );
 };
 
-const ProfileView = ({ session, formData, setFormData, setView, handleLogout, handleProfileUpdate }) => {
+const ProfileView = ({ session, formData, setFormData, setView, handleLogout, handleProfileUpdate, handleDeleteAccount }) => {
   const [uploading, setUploading] = useState(false);
 
   // Constrói a URL pública para o avatar do usuário
@@ -880,7 +885,7 @@ const ProfileView = ({ session, formData, setFormData, setView, handleLogout, ha
           </div>
         </div>
         
-        <div className="p-8 space-y-6">
+        <div className="p-8 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input label="Nome Completo" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
             <Input label="Email Principal" value={formData.email} disabled className="bg-gray-50 cursor-not-allowed opacity-70" />
@@ -890,7 +895,7 @@ const ProfileView = ({ session, formData, setFormData, setView, handleLogout, ha
           <Input label="Endereço Completo" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
           
           <div className="pt-6 border-t border-gray-100 flex justify-between items-center gap-3">
-            <Button variant="danger" className="h-auto px-4 py-2 text-sm">Excluir Conta</Button>
+            <Button variant="danger" onClick={handleDeleteAccount} className="h-auto px-4 py-2 text-sm">Excluir Conta</Button>
             <div className="flex gap-3">
               <Button variant="ghost" onClick={() => setView('upload')}>Cancelar</Button>
               <Button onClick={handleProfileUpdate}>Salvar Alterações</Button>
@@ -1086,6 +1091,83 @@ const ClausesView = ({ session, setView, handleLogout, handleGenerateEmail, hand
   );
 };
 
+const ComparisonView = ({ documentos, setView, session, handleLogout }) => {
+  const [contractAId, setContractAId] = useState('');
+  const [contractBId, setContractBId] = useState('');
+
+  const contractA = documentos.find(doc => doc.id === parseInt(contractAId));
+  const contractB = documentos.find(doc => doc.id === parseInt(contractBId));
+
+  // Lógica para determinar a melhor pontuação
+  let winner = null;
+  if (contractA?.analysis_result && contractB?.analysis_result) {
+    if (contractA.analysis_result.summary.score > contractB.analysis_result.summary.score) {
+      winner = 'A';
+    } else if (contractB.analysis_result.summary.score > contractA.analysis_result.summary.score) {
+      winner = 'B';
+    }
+  }
+
+  const renderSummary = (contract, isWinner) => {
+    if (!contract || !contract.analysis_result) {
+      return <div className="text-center text-gray-500 p-8">Selecione um contrato analisado.</div>;
+    }
+    const summary = contract.analysis_result.summary;
+    return (
+      <div className="space-y-4">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <p className="text-xs text-gray-500">Valor Principal</p>
+          <p className="font-bold text-lg text-blue-600">{summary.main_value}</p>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <p className="text-xs text-gray-500">Duração</p>
+          <p className="font-bold text-lg">{summary.duration}</p>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <p className="text-xs text-gray-500">Nível de Segurança</p>
+          <div className="flex items-center gap-2">
+            <p className={`font-bold text-lg ${summary.score > 70 ? 'text-green-600' : 'text-yellow-600'}`}>{summary.score} / 100</p>
+            {isWinner && (
+              <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">Melhor Opção</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <DashboardLayout active="comparison" setView={setView} session={session} handleLogout={handleLogout}>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Comparador de Contratos</h2>
+        <p className="text-gray-500">Selecione dois contratos para ver um resumo comparativo de suas análises.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Coluna Contrato A */}
+        <div className={`bg-white p-6 rounded-2xl shadow-sm transition-all duration-300 ${winner === 'A' ? 'border-2 border-green-500' : 'border border-gray-200'}`}>
+          <h3 className="font-bold text-lg mb-4">Contrato 1</h3>
+          <select value={contractAId} onChange={e => setContractAId(e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl mb-6">
+            <option value="">Selecione o primeiro contrato</option>
+            {documentos.filter(doc => doc.analysis_result).map(doc => <option key={doc.id} value={doc.id}>{doc.titulo}</option>)}
+          </select>
+          {renderSummary(contractA, winner === 'A')}
+        </div>
+
+        {/* Coluna Contrato B */}
+        <div className={`bg-white p-6 rounded-2xl shadow-sm transition-all duration-300 ${winner === 'B' ? 'border-2 border-green-500' : 'border border-gray-200'}`}>
+          <h3 className="font-bold text-lg mb-4">Contrato 2</h3>
+          <select value={contractBId} onChange={e => setContractBId(e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl mb-6">
+            <option value="">Selecione o segundo contrato</option>
+            {documentos.filter(doc => doc.analysis_result && doc.id !== parseInt(contractAId)).map(doc => <option key={doc.id} value={doc.id}>{doc.titulo}</option>)}
+          </select>
+          {renderSummary(contractB, winner === 'B')}
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+};
+
 // --- MAIN APP COMPONENT ---
 export default function App() {
   // Estado de Autenticação Real com Supabase
@@ -1096,6 +1178,7 @@ export default function App() {
   
   // Estados para dados reais do Supabase
   const [documentos, setDocumentos] = useState([]);
+  const [allDocumentos, setAllDocumentos] = useState([]); // Novo estado para a lista completa
 
   // Estados para paginação
   const [currentPage, setCurrentPage] = useState(0);
@@ -1176,6 +1259,7 @@ export default function App() {
     if (session) {
       fetchDocumentos(currentPage, debouncedSearchTerm, typeFilter); // Para a lista de histórico
       fetchDashboardData(); // Para os cards do dashboard
+      fetchAllDocuments(); // Busca a lista completa para o comparador
     }
   }, [session]);
 
@@ -1233,6 +1317,18 @@ export default function App() {
       })}`,
       totalAlerts,
     });
+  }
+
+  // Função para buscar TODOS os documentos (para o comparador)
+  async function fetchAllDocuments() {
+    try {
+      const { data, error } = await supabase
+        .from('documentos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setAllDocumentos(data || []);
+    } catch (error) { console.error("Erro ao buscar todos os documentos:", error); }
   }
 
   // Função para buscar documentos no Supabase
@@ -1327,8 +1423,15 @@ export default function App() {
       // Chamada real para a Netlify Function
       const response = await fetch('/.netlify/functions/analyze-contract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storagePath: documento.storage_path, contractType: documento.contract_type }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ 
+          storagePath: documento.storage_path, 
+          contractType: documento.contract_type,
+          documentId: documento.id 
+        }),
       });
 
       if (!response.ok) throw new Error(`Erro da API: ${response.statusText}`);
@@ -1407,25 +1510,29 @@ export default function App() {
     }
   };
 
-  const handleDownloadPdf = async (storagePath) => {
+  const handleDownloadPdf = async (documentTitle) => {
+    const reportElement = document.getElementById('analysis-report-content');
+    if (!reportElement) {
+      alert("Não foi possível encontrar o conteúdo da análise para gerar o PDF.");
+      return;
+    }
+
     try {
-      const { data, error } = await supabase.storage
-        .from('documentos')
-        .createSignedUrl(storagePath, 60); // URL válida por 60 segundos
-
-      if (error) throw error;
-
-      // Cria um link temporário e clica nele para forçar o download
-      // Esta abordagem é mais robusta contra bloqueadores de pop-up.
-      const link = document.createElement('a');
-      link.href = data.signedUrl;
-      link.setAttribute('download', ''); // Atributo 'download' força o download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const canvas = await html2canvas(reportElement, {
+        scale: 2, // Aumenta a resolução da imagem para um PDF de melhor qualidade
+        useCORS: true,
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Analise-${documentTitle.replace(/\s+/g, '-')}.pdf`);
     } catch (error) {
-      console.error("Erro ao gerar link para download:", error.message);
-      alert("Não foi possível baixar o arquivo.");
+      console.error("Erro ao gerar PDF da análise:", error);
+      alert("Ocorreu um erro ao gerar o PDF da análise.");
     }
   };
 
@@ -1581,6 +1688,25 @@ export default function App() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmationText = "EXCLUIR";
+    const userInput = prompt(`Esta ação é irreversível e irá apagar todos os seus dados.\n\nPara confirmar, digite "${confirmationText}" abaixo:`);
+
+    if (userInput !== confirmationText) {
+      alert("Ação cancelada.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('delete-user-account');
+      if (error) throw error;
+      alert("Sua conta foi excluída com sucesso.");
+      // O onAuthStateChange cuidará de redirecionar o usuário.
+    } catch (error) {
+      alert(`Erro ao excluir a conta: ${error.message}`);
+    }
+  };
+
   const handleGenerateEmail = (recommendation) => {
     const { type, text } = recommendation;
     let subject = "Proposta de Ajuste no Contrato";
@@ -1675,6 +1801,15 @@ export default function App() {
                   handleDeleteClause={handleDeleteClause}
                 />
               );
+            case 'comparison':
+              return (
+                <ComparisonView
+                  documentos={allDocumentos}
+                  setView={setView}
+                  session={session}
+                  handleLogout={handleLogout}
+                />
+              );
             case 'history':
               return (
                 <HistoryView
@@ -1717,6 +1852,7 @@ export default function App() {
                   setFormData={setFormData}
                   setView={setView}
                   handleLogout={handleLogout}
+                  handleDeleteAccount={handleDeleteAccount}
                   handleProfileUpdate={handleProfileUpdate}
                 />
               );

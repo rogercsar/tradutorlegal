@@ -24,7 +24,7 @@ exports.handler = async (event) => {
   // Permite que a função seja chamada de qualquer origem (CORS)
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 
@@ -38,7 +38,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { storagePath, contractType } = JSON.parse(event.body);
+    const { storagePath, contractType, documentId } = JSON.parse(event.body);
     if (!storagePath) {
       return { statusCode: 400, body: 'storagePath não fornecido.', headers };
     }
@@ -63,6 +63,27 @@ exports.handler = async (event) => {
       pdfText += strings.join(' ') + '\n';
     }
 
+    // --- Autenticação e Preparação para Salvar Tokens ---
+    const token = event.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      throw new Error("Token de autenticação não fornecido.");
+    }
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (!user) {
+      throw new Error("Usuário inválido ou não autenticado.");
+    }
+
+    const tokensToSave = [];
+    const saveToken = (name, value) => {
+      if (value && value !== 'Não identificado') {
+        tokensToSave.push({
+          token_name: name,
+          token_value: value,
+          context_text: pdfText.substring(Math.max(0, pdfText.indexOf(value) - 50), pdfText.indexOf(value) + value.length + 50)
+        });
+      }
+    };
+
     // 3. Lógica de Extração Determinística (O "Scanner") - Agora por tipo de contrato
     let extractedData = {};
 
@@ -75,8 +96,18 @@ exports.handler = async (event) => {
       const locatarioRegex = /LOCATÁRI(?:O|A):\s*([A-Z\s]+),/
 
       // --- Extração ---
+      const valorAluguel = hunt(pdfText, valorRegex);
+      const prazoVigencia = hunt(pdfText, prazoRegex);
       const indiceReajuste = hunt(pdfText, reajusteRegex);
       const valorMulta = hunt(pdfText, multaRegex);
+      const locador = hunt(pdfText, locadorRegex);
+      const locatario = hunt(pdfText, locatarioRegex);
+
+      // Prepara os tokens para serem salvos
+      saveToken('main_value', valorAluguel);
+      saveToken('duration', prazoVigencia);
+      saveToken('indice_reajuste', indiceReajuste);
+      saveToken('multa_contratual', valorMulta);
 
       // --- Lógica de Raciocínio e Recomendações ---
       const recommendations = [];
@@ -94,8 +125,8 @@ exports.handler = async (event) => {
         summary: {
           score: 75,
           risk_level: 'low',
-          main_value: hunt(pdfText, valorRegex),
-          duration: hunt(pdfText, prazoRegex, 'Não identificado'),
+          main_value: valorAluguel,
+          duration: prazoVigencia,
         },
         alerts: [
           { type: 'warning', title: 'Índice de Reajuste', desc: `O índice encontrado foi: ${indiceReajuste}.` },
@@ -103,14 +134,17 @@ exports.handler = async (event) => {
         ],
         terms: [
           { term: 'Foro de Eleição', meaning: 'Cidade onde ocorrerá o processo judicial caso haja briga.' },
-          { term: 'Locador', meaning: `A parte que aluga o imóvel: ${hunt(pdfText, locadorRegex, 'Não identificado')}` },
-          { term: 'Locatário', meaning: `A parte que irá ocupar o imóvel: ${hunt(pdfText, locatarioRegex, 'Não identificado')}` },
+          { term: 'Locador', meaning: `A parte que aluga o imóvel: ${locador}` },
+          { term: 'Locatário', meaning: `A parte que irá ocupar o imóvel: ${locatario}` },
         ],
         recommendations: recommendations,
       };
     } else if (contractType === 'seguro') {
         const coberturaEnchenteRegex = /(riscos\s+excluídos|não\s+há\s+cobertura)[\s\S]*?(enchente|inundação|alagamento)/i;
         const temExclusao = pdfText.match(coberturaEnchenteRegex);
+
+        // Prepara os tokens para serem salvos
+        saveToken('exclusao_enchente', temExclusao ? 'Sim' : 'Não');
 
         extractedData.summary = { score: 60, risk_level: 'medium', main_value: 'Apólice', duration: 'Anual' };
         extractedData.alerts = [];
@@ -128,6 +162,9 @@ exports.handler = async (event) => {
         const cetRegex = /Custo\s+Efetivo\s+Total\s*\(CET\)\s+de\s+([\d.,]+\s*%)\s+ao\s+ano/i;
         const cetAnual = hunt(pdfText, cetRegex);
 
+        // Prepara os tokens para serem salvos
+        saveToken('cet_anual', cetAnual);
+
         extractedData.summary = { score: 70, risk_level: 'medium', main_value: cetAnual, duration: 'N/A' };
         extractedData.alerts = [{ type: 'info', title: 'Custo Efetivo Total (CET)', desc: `O custo real do seu financiamento, incluindo juros, taxas e encargos, é de ${cetAnual} ao ano.` }];
         extractedData.recommendations = [{ type: 'suggestion', text: 'O CET é o número mais importante para comparar propostas de financiamento. Use este valor, e não apenas a taxa de juros nominal, para tomar sua decisão.' }];
@@ -138,10 +175,17 @@ exports.handler = async (event) => {
         const documentosRegex = /DOCUMENTOS\s+DE\s+HABILITAÇÃO([\s\S]*?)(\n[IVX]+\s*-|\n\n)/i;
         const garantiaRegex = /garantia\s+d(?:a|e)\s+proposta\s+no\s+valor\s+de\s+R\$\s*([\d.,]+)/i;
 
+        const prazoEntrega = hunt(pdfText, prazoEntregaRegex);
+        const valorGarantia = hunt(pdfText, garantiaRegex);
+
+        // Prepara os tokens para serem salvos
+        saveToken('prazo_entrega_proposta', prazoEntrega);
+        saveToken('valor_garantia', valorGarantia);
+
         extractedData.summary = { score: 85, risk_level: 'low', main_value: 'Edital', duration: 'N/A' };
         extractedData.alerts = [
-            { type: 'warning', title: 'Prazo de Entrega', desc: `A data limite para entrega das propostas parece ser: ${hunt(pdfText, prazoEntregaRegex)}.` },
-            { type: 'info', title: 'Garantia da Proposta', desc: `O valor da garantia exigida é de: ${hunt(pdfText, garantiaRegex)}.` }
+            { type: 'warning', title: 'Prazo de Entrega', desc: `A data limite para entrega das propostas parece ser: ${prazoEntrega}.` },
+            { type: 'info', title: 'Garantia da Proposta', desc: `O valor da garantia exigida é de: ${valorGarantia}.` }
         ];
         extractedData.recommendations = [{ type: 'suggestion', text: 'Crie um checklist com todos os documentos de habilitação e revise-os cuidadosamente para evitar desclassificação.' }];
         extractedData.terms = [{ term: 'Habilitação Jurídica', meaning: 'Comprovação de que sua empresa existe legalmente e está apta a contratar com o poder público.' }];
@@ -149,6 +193,9 @@ exports.handler = async (event) => {
     } else if (contractType === 'propriedade_intelectual' || contractType === 'servicos') {
         const piRegex = /propriedade\s+intelectual[\s\S]*?pertencerá\s+(?:exclusivamente\s+)?a(?:o|à)\s+(CONTRATANTE|CONTRATADA)/i;
         const donoDaPI = hunt(pdfText, piRegex);
+
+        // Prepara os tokens para serem salvos
+        saveToken('dono_propriedade_intelectual', donoDaPI);
 
         extractedData.summary = { score: 65, risk_level: 'medium', main_value: 'Propriedade Intelectual', duration: 'N/A' };
         extractedData.alerts = [];
@@ -168,10 +215,16 @@ exports.handler = async (event) => {
         const prazoSigiloRegex = /período\s+de\s+sigilo\s+de\s*([\d\s\w]+)/i;
         const multaRegex = /multa\s+por\s+quebra\s+de\s+sigilo.*?R\$\s*([\d.,]+)/i;
 
-        extractedData.summary = { score: 70, risk_level: 'low', main_value: 'Confidencialidade', duration: hunt(pdfText, prazoSigiloRegex) };
+        const prazoSigilo = hunt(pdfText, prazoSigiloRegex);
+        const multaSigilo = hunt(pdfText, multaRegex);
+
+        saveToken('prazo_sigilo', prazoSigilo);
+        saveToken('multa_quebra_sigilo', multaSigilo);
+
+        extractedData.summary = { score: 70, risk_level: 'low', main_value: 'Confidencialidade', duration: prazoSigilo };
         extractedData.alerts = [
-            { type: 'info', title: 'Duração do Sigilo', desc: `O dever de confidencialidade permanece por: ${hunt(pdfText, prazoSigiloRegex)}.` },
-            { type: 'danger', title: 'Multa por Quebra', desc: `A multa por quebra de sigilo identificada é de: ${hunt(pdfText, multaRegex)}.` }
+            { type: 'info', title: 'Duração do Sigilo', desc: `O dever de confidencialidade permanece por: ${prazoSigilo}.` },
+            { type: 'danger', title: 'Multa por Quebra', desc: `A multa por quebra de sigilo identificada é de: ${multaSigilo}.` }
         ];
         extractedData.recommendations = [];
         extractedData.terms = [{ term: 'Informação Confidencial', meaning: 'Qualquer dado, técnico ou comercial, que não seja de conhecimento público e que seja compartilhado entre as partes.' }];
@@ -187,6 +240,21 @@ exports.handler = async (event) => {
         terms: [],
         recommendations: [],
       };
+    }
+
+    // --- Salvando os Tokens ---
+    if (tokensToSave.length > 0) {
+      const tokensWithIds = tokensToSave.map(token => ({
+        ...token,
+        user_id: user.id,
+        document_id: documentId,
+        contract_type: contractType,
+      }));
+
+      const { error: tokenError } = await supabase.from('extracted_tokens').insert(tokensWithIds);
+      if (tokenError) {
+        console.error("Erro ao salvar tokens:", tokenError); // Loga o erro mas não para a execução
+      }
     }
 
     // 4. Retorna o JSON estruturado para o frontend
