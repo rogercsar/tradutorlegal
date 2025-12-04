@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react';
 import { 
-  Shield, FileText, CheckCircle, AlertTriangle, Search, Send, LayoutDashboard, Lightbulb,
+  Shield, FileText, CheckCircle, AlertTriangle, Search, Send, LayoutDashboard, Lightbulb, RefreshCw, Bookmark,
   Menu, X, User, Upload, ArrowRight, Lock, Save, Share2, 
   MessageSquare, FileCheck, DollarSign, Calendar, Home, Trash2, History,
   Zap, Star, ChevronDown, Check, Mail, Phone, MapPin
@@ -140,6 +140,43 @@ const ChatModal = ({ isOpen, onClose, messages, onSendMessage, isReplying }) => 
             />
             <Button onClick={handleSend} className="h-auto px-4" disabled={isReplying}><Send className="h-5 w-5" /></Button>
           </div>
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+const EmailSuggestionModal = ({ isOpen, onClose, emailText }) => {
+  if (!isOpen) return null;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(emailText).then(() => {
+      alert('Texto copiado para a área de transferência!');
+    }, (err) => {
+      console.error('Erro ao copiar texto: ', err);
+      alert('Falha ao copiar o texto.');
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
+        <header className="p-4 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="font-bold text-lg flex items-center gap-2">
+            <Mail className="h-5 w-5 text-blue-600" />
+            Sugestão de E-mail para Negociação
+          </h3>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100"><X className="h-5 w-5 text-gray-500" /></button>
+        </header>
+        <main className="p-6">
+          <p className="text-sm text-gray-500 mb-4">Você pode copiar o texto abaixo e adaptá-lo para enviar ao locador ou prestador de serviço.</p>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap font-mono max-h-[40vh] overflow-y-auto">
+            {emailText}
+          </div>
+        </main>
+        <footer className="p-4 border-t border-gray-200 flex justify-end gap-3">
+          <Button variant="secondary" onClick={onClose}>Fechar</Button>
+          <Button onClick={copyToClipboard}>Copiar Texto</Button>
         </footer>
       </div>
     </div>
@@ -447,6 +484,7 @@ const DashboardLayout = ({ children, active = 'upload', setView, currentContract
         <nav className="space-y-1">
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+            { id: 'clauses', icon: Bookmark, label: 'Cláusulas Salvas' },
             { id: 'upload', icon: Upload, label: 'Novo Contrato' },
             { id: 'history', icon: History, label: 'Histórico' },
             { id: 'analysis', icon: FileCheck, label: 'Última Análise', disabled: !currentContract },
@@ -593,7 +631,7 @@ const UploadView = ({ session, loading, documentos, handleAnalyseDocument, handl
   </DashboardLayout>);
 };
 
-const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleAddReminder, setView, session, handleLogout }) => {
+const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleAddReminder, handleReanalyze, handleSaveClause, handleGenerateEmail, setView, session, handleLogout }) => {
   if (!currentContract) return <UploadView />;
   
   // Acessa os dados da análise a partir da propriedade aninhada 'analysis_result'
@@ -613,7 +651,8 @@ const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleA
           <h2 className="text-3xl font-bold text-gray-900">Resumo do Contrato</h2>
         </div>
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => handleDownloadPdf(data.storage_path)} className="px-4 py-2 text-sm h-10"><Save className="h-4 w-4" /> Salvar PDF</Button>
+          <Button variant="outline" onClick={() => handleReanalyze(data)} className="px-4 py-2 text-sm h-10 text-gray-600 border-gray-300 hover:bg-gray-50"><RefreshCw className="h-4 w-4" /> Analisar Novamente</Button>
+          <Button variant="secondary" onClick={() => handleDownloadPdf(data.storage_path)} className="px-4 py-2 text-sm h-10"><Save className="h-4 w-4" /> Baixar PDF</Button>
           <Button onClick={() => handleShare(data.titulo)} className="px-4 py-2 text-sm h-10"><Share2 className="h-4 w-4" /> Compartilhar</Button>
         </div>
       </header>
@@ -678,6 +717,9 @@ const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleA
                   <h4 className="font-bold text-gray-900 text-lg mb-1">{alert.title}</h4>
                   <p className="text-gray-600 leading-relaxed">{alert.desc}</p>
                 </div>
+                <button onClick={() => handleSaveClause('alert', alert.title, alert.desc)} className="ml-auto p-2 rounded-full hover:bg-gray-100 shrink-0">
+                  <Bookmark className="h-5 w-5 text-gray-400 hover:text-blue-600" />
+                </button>
               </div>
             ))}
           </div>
@@ -691,11 +733,17 @@ const AnalysisView = ({ currentContract, handleDownloadPdf, handleShare, handleA
               </h3>
               <div className="space-y-4">
                 {data.recommendations.map((rec, idx) => (
-                  <div key={idx} className="p-5 rounded-2xl border-l-4 border-blue-500 bg-blue-50/50 flex gap-4 items-start">
+                  <div key={idx} className="p-5 rounded-2xl border-l-4 border-blue-500 bg-blue-50/50 flex flex-col sm:flex-row gap-4 items-start">
                     <div className="mt-1 p-2 bg-blue-100 text-blue-600 rounded-full shrink-0">
                       <Lightbulb className="h-5 w-5" />
                     </div>
-                    <p className="text-gray-700 leading-relaxed">{rec.text}</p>
+                    <p className="text-gray-700 leading-relaxed flex-1">{rec.text}</p>
+                    <div className="flex gap-2 self-start sm:self-center">
+                      <Button variant="ghost" onClick={() => handleGenerateEmail(rec)} className="h-auto px-3 py-1 text-xs">Gerar E-mail</Button>
+                      <button onClick={() => handleSaveClause('recommendation', 'Recomendação da IA', rec.text)} className="p-2 rounded-full hover:bg-gray-100 shrink-0">
+                        <Bookmark className="h-5 w-5 text-gray-400 hover:text-blue-600" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -944,6 +992,66 @@ const DashboardView = ({ session, setView, handleLogout, dashboardData }) => (
   </DashboardLayout>
 );
 
+const ClausesView = ({ session, setView, handleLogout, handleGenerateEmail, handleDeleteClause }) => {
+  const [savedClauses, setSavedClauses] = useState([]);
+  const [loadingClauses, setLoadingClauses] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true; // Flag para controlar o efeito
+
+    async function fetchSavedClauses() {
+      setLoadingClauses(true);
+      const { data, error } = await supabase
+        .from('saved_clauses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (isMounted) { // Só atualiza o estado se o componente ainda estiver montado
+        if (error) {
+          console.error("Erro ao buscar cláusulas salvas:", error);
+        } else {
+          setSavedClauses(data);
+        }
+        setLoadingClauses(false);
+      }
+    }
+    fetchSavedClauses();
+
+    return () => { isMounted = false; }; // Função de limpeza
+  }, []); // O array vazio garante que o efeito rode apenas na montagem
+
+  return (
+    <DashboardLayout active="clauses" setView={setView} session={session} handleLogout={handleLogout}>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Cláusulas Salvas</h2>
+        <p className="text-gray-500">Seu repositório pessoal de pontos importantes e recomendações.</p>
+      </div>
+      {loadingClauses ? <p>Carregando...</p> : (
+        <div className="space-y-4">
+          {savedClauses.map(clause => (
+            <div key={clause.id} className="bg-white p-5 rounded-xl border border-gray-200 flex flex-col">
+              <div className="flex justify-between items-start mb-2">
+                <p className="text-xs text-gray-400">Do contrato: <span className="font-semibold text-gray-500">{clause.document_title}</span></p>
+                <p className="text-xs text-gray-400">Salvo em: {new Date(clause.created_at).toLocaleDateString()}</p>
+              </div>
+              <h4 className="font-bold text-gray-800 mb-2 flex-1">{clause.clause_title}</h4>
+              <p className="text-gray-600 text-sm mb-4 flex-1">{clause.clause_text}</p>
+              <div className="flex justify-end items-center gap-2 border-t border-gray-100 pt-3 mt-auto">
+                {clause.clause_type.startsWith('recommendation') && (
+                  <Button variant="ghost" onClick={() => handleGenerateEmail({ type: clause.clause_type.split(':')[1], text: clause.clause_text })} className="h-auto px-3 py-1 text-xs">Gerar E-mail</Button>
+                )}
+                <button onClick={() => handleDeleteClause(clause.id)} className="p-2 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </DashboardLayout>
+  );
+};
+
 // --- MAIN APP COMPONENT ---
 export default function App() {
   // Estado de Autenticação Real com Supabase
@@ -974,6 +1082,10 @@ export default function App() {
 
   // Estado para Notificações
   const [notifications, setNotifications] = useState([]);
+
+  // Estados para o Modal de Sugestão de E-mail
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailSuggestion, setEmailSuggestion] = useState('');
 
   // Estado para os dados do Dashboard
   const [dashboardData, setDashboardData] = useState(null);
@@ -1200,6 +1312,31 @@ export default function App() {
     }
   };
   
+  const handleReanalyze = async (documento) => {
+    if (!window.confirm(`Tem certeza que deseja re-analisar o documento "${documento.titulo}"? A análise anterior será perdida e uma nova será gerada com as regras mais recentes.`)) {
+      return;
+    }
+
+    try {
+      // 1. Limpa o resultado da análise anterior no banco de dados
+      const { error: updateError } = await supabase
+        .from('documentos')
+        .update({ analysis_result: null })
+        .eq('id', documento.id);
+
+      if (updateError) throw updateError;
+
+      // 2. Cria um objeto de documento atualizado para forçar a reanálise
+      const updatedDocumento = { ...documento, analysis_result: null };
+
+      // 3. Chama a função de análise principal, que agora será forçada a usar o backend
+      await handleAnalyseDocument(updatedDocumento);
+    } catch (error) {
+      console.error("Erro ao solicitar reanálise:", error.message);
+      alert("Não foi possível iniciar a reanálise.");
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     // O onAuthStateChange vai cuidar de redirecionar para 'landing'
@@ -1346,6 +1483,73 @@ export default function App() {
     // setChatMessages([]);
   };
 
+  const handleSaveClause = async (type, title, text) => {
+    if (!currentContract) return;
+
+    try {
+      const { error } = await supabase.from('saved_clauses').insert({
+        user_id: session.user.id,
+        document_id: currentContract.id,
+        document_title: currentContract.titulo,
+        clause_type: type,
+        clause_title: title,
+        clause_text: text,
+      });
+
+      if (error) throw error;
+
+      const newNotification = {
+        id: Date.now(),
+        message: 'Cláusula salva com sucesso!',
+      };
+      setNotifications(prev => [...prev, newNotification]);
+    } catch (error) {
+      console.error("Erro ao salvar cláusula:", error);
+      alert("Não foi possível salvar a cláusula.");
+    }
+  };
+
+  const handleDeleteClause = async (clauseId) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta cláusula salva?')) {
+      return;
+    }
+    try {
+      const { error } = await supabase.from('saved_clauses').delete().match({ id: clauseId });
+      if (error) throw error;
+      // Força a recarga da view de cláusulas para refletir a exclusão
+      setView(''); // truque para forçar a remontagem
+      setTimeout(() => setView('clauses'), 0);
+    } catch (error) {
+      alert('Erro ao deletar a cláusula.');
+    }
+  };
+
+  const handleGenerateEmail = (recommendation) => {
+    const { type, text } = recommendation;
+    let subject = "Proposta de Ajuste no Contrato";
+    let body = `Prezado(a),\n\nAgradeço o envio da minuta do contrato. Após uma análise cuidadosa, gostaria de discutir um ponto para chegarmos a um acordo benéfico para ambas as partes.\n\n`;
+
+    if (type === 'suggestion' && text.includes('IGP-M')) {
+      subject = "Sugestão sobre o Índice de Reajuste";
+      body += `Notei que o índice de reajuste definido é o IGP-M. Considerando sua alta volatilidade histórica, gostaria de propor a utilização do IPCA, que tende a ser mais estável e previsível, garantindo maior segurança para nossa relação contratual.\n\n`;
+    } else if (type === 'negotiation' && text.includes('multa')) {
+      subject = "Negociação da Multa Rescisória";
+      body += `A respeito da multa rescisória, gostaria de sugerir uma negociação para um valor que considere a proporcionalidade de forma mais equilibrada, talvez fixando-a em 2 (dois) meses de aluguel.\n\n`;
+    } else if (type === 'addition' && text.includes('benfeitorias')) {
+      subject = "Inclusão de Cláusula sobre Benfeitorias";
+      body += `Verifiquei que o contrato não detalha o tratamento de benfeitorias. Para evitar ambiguidades futuras, sugiro que adicionemos uma cláusula especificando como as benfeitorias úteis e necessárias serão tratadas, incluindo a possibilidade de indenização ou abatimento no aluguel.\n\n`;
+    } else {
+      body += `O ponto em questão é: "${text}"\n\nGostaria de saber se podemos discutir uma alternativa.\n\n`;
+    }
+
+    body += `Agradeço a atenção e fico à disposição para conversarmos.\n\nAtenciosamente,`;
+
+    setEmailSuggestion(body);
+    setIsEmailModalOpen(true);
+  };
+
+  const closeEmailModal = () => setIsEmailModalOpen(false);
+
   // --- RENDER CONTROL ---
 
   // Renderiza as views baseado na sessão do usuário
@@ -1377,6 +1581,9 @@ export default function App() {
         {/* Modal do Chat */}
         <ChatModal isOpen={isChatOpen} onClose={closeChat} messages={chatMessages} onSendMessage={handleSendMessage} isReplying={isAiReplying} />
 
+        {/* Modal de Sugestão de E-mail */}
+        <EmailSuggestionModal isOpen={isEmailModalOpen} onClose={closeEmailModal} emailText={emailSuggestion} />
+
         {(() => {
           switch (view) {
             case 'dashboard':
@@ -1399,6 +1606,16 @@ export default function App() {
                   fetchDocumentos={fetchDocumentos}
                   setView={setView}
                   handleLogout={handleLogout}
+                />
+              );
+            case 'clauses':
+              return (
+                <ClausesView
+                  session={session}
+                  setView={setView}
+                  handleLogout={handleLogout}
+                  handleGenerateEmail={handleGenerateEmail}
+                  handleDeleteClause={handleDeleteClause}
                 />
               );
             case 'history':
@@ -1427,6 +1644,9 @@ export default function App() {
                   handleDownloadPdf={handleDownloadPdf}
                   handleShare={handleShare}
                   handleAddReminder={handleAddReminder}
+                  handleGenerateEmail={handleGenerateEmail}
+                  handleSaveClause={handleSaveClause}
+                  handleReanalyze={handleReanalyze}
                   setView={setView}
                   session={session}
                   handleLogout={handleLogout}
