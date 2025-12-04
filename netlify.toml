@@ -1,2 +1,7 @@
 [build]
-functions = "netlify/functions"
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  external_node_modules = ["pdfjs-dist"]
