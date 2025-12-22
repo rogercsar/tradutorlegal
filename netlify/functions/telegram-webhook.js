@@ -170,6 +170,6 @@ export const handler = async (event) => {
                 }
             }
         } catch (e) { }
-        return { statusCode: 500, body: 'Error' };
+        return { statusCode: 200, body: 'Error handled' };
     }
 };
