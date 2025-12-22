@@ -1,5 +1,5 @@
 import { analyzeText } from './utils/analysisCore.js';
-import axios from 'axios'; // Removed in favor of native fetch, but wait, I need to remove the import line entirely.
+
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
