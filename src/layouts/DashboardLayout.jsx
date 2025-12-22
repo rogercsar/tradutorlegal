@@ -20,9 +20,7 @@ const DashboardLayout = ({ children, active = 'upload', setView, currentContract
                 <div>
                     <div className="flex items-center justify-between mb-10">
                         <div className="flex items-center gap-2 font-bold text-xl text-gray-900 cursor-pointer" onClick={() => setView('dashboard')}>
-                            <div className="bg-blue-600 p-1 rounded-md">
-                                <Shield className="h-5 w-5 text-white" />
-                            </div>
+                            <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
                             <span>Tradutor<span className="text-blue-600">Legal</span></span>
                         </div>
                         <button onClick={() => setIsMenuOpen(false)} className="md:hidden p-1">
@@ -80,9 +78,7 @@ const DashboardLayout = ({ children, active = 'upload', setView, currentContract
                 {/* Mobile Header */}
                 <header className="md:hidden sticky top-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4 flex items-center justify-between z-30">
                     <div className="flex items-center gap-2 font-bold text-lg text-gray-900" onClick={() => setView('dashboard')}>
-                        <div className="bg-blue-600 p-1 rounded-md">
-                            <Shield className="h-5 w-5 text-white" />
-                        </div>
+                        <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
                         <span>Tradutor<span className="text-blue-600">Legal</span></span>
                     </div>
                     <button onClick={() => setIsMenuOpen(true)} className="p-2">

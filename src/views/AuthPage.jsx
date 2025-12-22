@@ -10,9 +10,7 @@ const AuthPage = ({ isLoginMode, setIsLoginMode, formData, setFormData, handleAu
             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
 
             <div className="text-center mb-10">
-                <div className="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
-                    <Shield className="h-8 w-8 text-blue-600" />
-                </div>
+                <img src="/logo.png" alt="Logo Tradutor Legal" className="h-16 w-auto mx-auto mb-6" />
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">
                     {isLoginMode ? 'Bem-vindo de volta' : 'Crie sua conta'}
                 </h2>
