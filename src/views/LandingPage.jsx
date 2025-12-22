@@ -40,7 +40,7 @@ const LandingPage = ({ setView, setIsLoginMode }) => (
             <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-200 mb-8 animate-fade-in-up">
                     <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
-                    <span className="text-sm font-medium text-gray-600">+10.000 contratos simplificados hoje</span>
+                    <span className="text-sm font-medium text-gray-600">Simplifique seus contratos hoje</span>
                 </div>
 
                 <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-8 leading-[1.1]">
@@ -98,15 +98,18 @@ const LandingPage = ({ setView, setIsLoginMode }) => (
         <section id="funciona" className="py-24 bg-white">
             <div className="max-w-7xl mx-auto px-4">
                 <div className="text-center mb-20">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Como funciona</h2>
-                    <p className="text-lg text-gray-500">Simplificamos o complexo em 3 passos.</p>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Tudo o que você precisa</h2>
+                    <p className="text-lg text-gray-500">Uma plataforma completa para descomplicar sua vida.</p>
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-8">
                     {[
                         { icon: Upload, color: "text-blue-600", bg: "bg-blue-50", title: "1. Upload Seguro", desc: "Envie PDF, foto ou Word. Seus dados são criptografados de ponta a ponta." },
                         { icon: Zap, color: "text-purple-600", bg: "bg-purple-50", title: "2. Análise Instantânea", desc: "Nossa IA lê 50 páginas em segundos e destaca o que realmente importa." },
-                        { icon: FileCheck, color: "text-green-600", bg: "bg-green-50", title: "3. Relatório Claro", desc: "Receba um resumo com riscos (vermelho) e benefícios (verde)." }
+                        { icon: FileCheck, color: "text-green-600", bg: "bg-green-50", title: "3. Relatório Claro", desc: "Receba um resumo com riscos (vermelho) e benefícios (verde)." },
+                        { icon: Share2, color: "text-indigo-600", bg: "bg-indigo-50", title: "4. Bot no Telegram", desc: "Envie contratos direto pelo Telegram e receba a análise na palma da mão." },
+                        { icon: Shield, color: "text-teal-600", bg: "bg-teal-50", title: "5. Histórico Seguro", desc: "Todos os seus contratos ficam salvos e organizados no seu dashboard." },
+                        { icon: Mail, color: "text-orange-600", bg: "bg-orange-50", title: "6. Suporte Humanizado", desc: "Dúvidas sobre a análise? Nosso time jurídico está pronto para ajudar." }
                     ].map((feature, idx) => (
                         <div key={idx} className="group p-8 rounded-3xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <div className={`w-14 h-14 ${feature.bg} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
@@ -116,6 +119,48 @@ const LandingPage = ({ setView, setIsLoginMode }) => (
                             <p className="text-gray-500 leading-relaxed">{feature.desc}</p>
                         </div>
                     ))}
+                </div>
+            </div>
+        </section>
+
+        {/* Exemplo Prático (Before/After) */}
+        <section id="exemplo" className="py-24 bg-blue-50">
+            <div className="max-w-7xl mx-auto px-4">
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Veja a mágica acontecer</h2>
+                    <p className="text-lg text-gray-500">De "juridiquês" para português claro em segundos.</p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-8 items-stretch">
+                    {/* Before */}
+                    <div className="bg-white rounded-3xl p-8 shadow-sm border border-red-100 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-red-400"></div>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="bg-red-100 p-2 rounded-lg">
+                                <FileCheck className="h-6 w-6 text-red-500" />
+                            </div>
+                            <h3 className="font-bold text-gray-900">Original (Confuso)</h3>
+                        </div>
+                        <p className="font-serif text-gray-600 leading-relaxed text-sm italic">
+                            "O presente instrumento poderá ser rescindido unilateralmente por qualquer das partes, mediante notificação formal com antecedência mínima de 30 (trinta) dias, sob pena de incidência de multa compensatória equivalente a 03 (três) montantes locatícios vigentes à época da infração, sem prejuízo de perdas e danos suplementares."
+                        </p>
+                    </div>
+
+                    {/* After */}
+                    <div className="bg-white rounded-3xl p-8 shadow-xl border border-blue-100 relative overflow-hidden transform md:scale-105 z-10">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="bg-blue-100 p-2 rounded-lg">
+                                <Zap className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <h3 className="font-bold text-blue-600">Tradução Legal</h3>
+                        </div>
+                        <p className="text-gray-700 leading-relaxed font-medium">
+                            <span className="bg-yellow-100 px-1 rounded">Você pode cancelar o contrato</span> avizando com 30 dias de antecedência.
+                            <br /><br />
+                            ⚠️ <span className="font-bold text-gray-900">Risco:</span> Se não avisar ou sair antes do prazo, você paga uma multa de <span className="text-red-600 font-bold">3 meses de aluguel</span> + prejuízos extras.
+                        </p>
+                    </div>
                 </div>
             </div>
         </section>
