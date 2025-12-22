@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",
     "html2canvas": "^1.4.1",
+    "axios": "^1.7.9",
     "jspdf": "^3.0.4",
     "lucide-react": "^0.555.0",
     "multiparty": "^4.2.3",
