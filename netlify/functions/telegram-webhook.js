@@ -26,21 +26,27 @@ const sendTypingAction = async (chatId) => {
 };
 
 export const handler = async (event) => {
+    console.log("🔍 [Webhook] Função iniciada. Método:", event.httpMethod); // Log de entrada
+
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
     try {
+        console.log("🔍 [Webhook] Corpo recebido:", event.body); // Log do payload
         const update = JSON.parse(event.body);
 
         // Verifica se é uma mensagem
         if (!update.message) {
+            console.log("⚠️ [Webhook] Update não contém mensagem. Ignorando.");
             return { statusCode: 200, body: 'OK' }; // Ignora atualizações que não são mensagens
         }
 
         const chatId = update.message.chat.id;
         const document = update.message.document;
         const text = update.message.text;
+
+        console.log(`🔍 [Webhook] ChatID: ${chatId}, Texto: ${text}, Documento: ${document ? 'Sim' : 'Não'}`);
 
         // Menu Principal
         const mainMenuKeyboard = {
@@ -96,6 +102,7 @@ export const handler = async (event) => {
             const pdfBuffer = pdfRes.data;
 
             // Extrai texto
+            const pdfjsLib = await import('pdfjs-dist');
             const doc = await pdfjsLib.getDocument(pdfBuffer).promise;
             let pdfText = '';
             for (let i = 1; i <= doc.numPages; i++) {

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import * as pdfjsLib from 'pdfjs-dist';
 import { analyzeText } from './utils/analysisCore.js';
+
 
 
 // Inicializa o cliente Supabase com as variáveis de ambiente do backend.
@@ -39,6 +39,7 @@ export const handler = async (event) => {
 
     // 2. Extrai o texto do PDF
     const pdfBuffer = await fileData.arrayBuffer();
+    const pdfjsLib = await import('pdfjs-dist');
     const doc = await pdfjsLib.getDocument(pdfBuffer).promise;
     let pdfText = '';
 
