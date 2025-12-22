@@ -39,16 +39,9 @@ export const handler = async (event) => {
 
     // 2. Extrai o texto do PDF
     const pdfBuffer = await fileData.arrayBuffer();
-    const pdfjsLib = await import('pdfjs-dist');
-    const doc = await pdfjsLib.getDocument(pdfBuffer).promise;
-    let pdfText = '';
-
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      const strings = content.items.map(item => item.str);
-      pdfText += strings.join(' ') + '\n';
-    }
+    const pdfParse = await import('pdf-parse');
+    const data = await pdfParse.default(Buffer.from(pdfBuffer));
+    const pdfText = data.text;
 
     // --- Autenticação ---
     const token = event.headers.authorization?.replace("Bearer ", "");

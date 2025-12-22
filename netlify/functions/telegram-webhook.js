@@ -1,5 +1,5 @@
 import { analyzeText } from './utils/analysisCore.js';
-import * as pdfjsLib from 'pdfjs-dist';
+
 import axios from 'axios';
 
 
@@ -102,15 +102,9 @@ export const handler = async (event) => {
             const pdfBuffer = pdfRes.data;
 
             // Extrai texto
-            const pdfjsLib = await import('pdfjs-dist');
-            const doc = await pdfjsLib.getDocument(pdfBuffer).promise;
-            let pdfText = '';
-            for (let i = 1; i <= doc.numPages; i++) {
-                const page = await doc.getPage(i);
-                const content = await page.getTextContent();
-                const strings = content.items.map(item => item.str);
-                pdfText += strings.join(' ') + '\n';
-            }
+            const pdfParse = await import('pdf-parse');
+            const data = await pdfParse.default(pdfBuffer);
+            const pdfText = data.text;
 
             // Analisa
             let contractType = 'outro';
