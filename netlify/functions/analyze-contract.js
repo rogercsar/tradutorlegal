@@ -1,6 +1,7 @@
-const { createClient } = require('@supabase/supabase-js');
-const pdfjsLib = require('pdfjs-dist');
-const { analyzeText } = require('./utils/analysisCore');
+import { createClient } from '@supabase/supabase-js';
+import * as pdfjsLib from 'pdfjs-dist';
+import { analyzeText } from './utils/analysisCore.js';
+
 
 // Inicializa o cliente Supabase com as variáveis de ambiente do backend.
 const supabase = createClient(
@@ -8,7 +9,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

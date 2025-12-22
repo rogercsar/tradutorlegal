@@ -188,4 +188,7 @@ const analyzeText = (pdfText, contractType) => {
     return { extractedData, tokensToSave };
 };
 
-module.exports = { analyzeText };
+
+// ESM Export
+export { analyzeText };
+

@@ -1,6 +1,7 @@
-const { analyzeText } = require('./utils/analysisCore');
-const pdfjsLib = require('pdfjs-dist');
-const axios = require('axios');
+import { analyzeText } from './utils/analysisCore.js'; // Note extension
+import * as pdfjsLib from 'pdfjs-dist';
+import axios from 'axios';
+
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
@@ -20,7 +21,7 @@ const sendTypingAction = async (chatId) => {
     });
 };
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
