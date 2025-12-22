@@ -1,4 +1,5 @@
 import { analyzeText } from './utils/analysisCore.js';
+import pdfParse from 'pdf-parse';
 
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;

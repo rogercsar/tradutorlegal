@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import pdfParse from 'pdf-parse';
 import { analyzeText } from './utils/analysisCore.js';
 
 
@@ -39,8 +40,7 @@ export const handler = async (event) => {
 
     // 2. Extrai o texto do PDF
     const pdfBuffer = await fileData.arrayBuffer();
-    const pdfParse = await import('pdf-parse');
-    const data = await pdfParse.default(Buffer.from(pdfBuffer));
+    const data = await pdfParse(Buffer.from(pdfBuffer));
     const pdfText = data.text;
 
     // --- Autenticação ---
