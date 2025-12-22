@@ -8,9 +8,9 @@ const LandingPage = ({ setView, setIsLoginMode }) => (
         {/* Navbar Transparente/Sticky */}
         <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 transition-all">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-20">
+                <div className="flex justify-between items-center h-24">
                     <div className="flex items-center gap-2 text-2xl font-bold cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
-                        <img src="/logo.png" alt="Logo Tradutor Legal" className="h-8 w-auto" />
+                        <img src="/logo.png" alt="Logo Tradutor Legal" className="h-20 w-auto" />
                         <span className="text-gray-900 tracking-tight">Tradutor<span className="text-blue-600">Legal</span></span>
                     </div>
                     <div className="hidden md:flex gap-8 items-center font-medium text-sm text-gray-600">
@@ -172,7 +172,7 @@ const LandingPage = ({ setView, setIsLoginMode }) => (
         </section>
 
         {/* Footer Minimalista */}
-        <footer className="bg-white border-t border-gray-200 py-12">
+        <footer className="bg-white border-t border-gray-200 py-8">
             <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="flex items-center gap-2 text-xl font-bold text-gray-900">
                     <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
